@@ -1,0 +1,11 @@
+{
+ "name": "Capitol Pulse — Congressional Trade Tracker",
+ "short_name": "Capitol Pulse",
+ "description": "Congressional stock disclosures, transparent rankings, and hypothetical returns",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#080d16",
+ "theme_color": "#080d16",
+ "icons": [{"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

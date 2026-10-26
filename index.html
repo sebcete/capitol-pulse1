@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#080d16">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Capitol Pulse">
+<meta name="description" content="Congressional trades, top-10 research leaderboard and hypothetical investment returns.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-apple.png">
+<link rel="stylesheet" href="styles.css"><title>Capitol Pulse — Congress, in focus</title>
+</head><body>
+<div class="shell">
+<header class="topbar"><div class="brand"><span class="brandmark"><svg viewBox="0 0 30 30" fill="none" aria-hidden="true"><path d="m4 23 7-8 5 4L26 7" stroke="currentColor" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/><path d="M20 7h6v6" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg></span><span>CAPITOL <b>PULSE</b><small>CONGRESSIONAL MARKETS</small></span></div><button id="refresh" class="round-icon" aria-label="Refresh data" title="Refresh data"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5 9a8 8 0 0 1 14-2l1 5M4 12l1 5a8 8 0 0 0 14-2"/></svg></button></header>
+<main>
+<section id="overview" class="screen active" aria-label="Overview">
+ <div class="eyebrow"><span class="live-dot"></span> PUBLIC DISCLOSURES <span class="eyebrow-right" id="lastUpdate">Loading data…</span></div>
+ <h1>Follow the trades.<br><em>Know the delay.</em></h1>
+ <p class="subtitle">A clearer look at disclosed Congressional trades and what following them <i>after publication</i> might have returned.</p>
+ <div id="notice" class="notice notice-warn" role="status"><span class="notice-dot"></span><span>Connecting to the latest published snapshot…</span></div>
+ <section class="metrics" aria-label="Dataset statistics"><div><span class="stat-label">RECENT FILINGS</span><strong id="totalTrades">—</strong><small>In analysis window</small></div><div><span class="stat-label">POLITICIANS</span><strong id="totalMembers">—</strong><small>With reported trades</small></div><div><span class="stat-label">LATEST FILING</span><strong id="latestFiling">—</strong><small>Source filing date</small></div></section>
+ <div class="section-heading"><div><div class="overline">PERFORMANCE WATCH</div><h2>Top 10 politicians</h2></div><span class="info-chip" title="Equal-weight returns for publicly disclosed purchases, measured from the next closing price after the filing date; at least two measurable purchases required.">i <span>method</span></span></div>
+ <div class="segmented" aria-label="Lookback window"><button class="period" data-days="30">30D</button><button class="period active" data-days="90">90D</button><button class="period" data-days="180">180D</button></div>
+ <div class="leaderboard" id="leaderboard"><div class="empty">Calculating performance from published disclosures…</div></div>
+ <p class="footnote">Leaderboard shows <b>simulated returns on reported purchases</b>, not politicians' actual portfolio performance. Minimum 2 priced buys; equal weighting; no fees or taxes.</p>
+ <div class="section-heading spaced"><div><div class="overline">FRESHLY DISCLOSED</div><h2>Recent activity</h2></div><button class="text-action" data-goto="trades">See all →</button></div>
+ <div id="homeTrades" class="trade-list"></div>
+ <div class="section-heading spaced"><div><div class="overline">PRICE &amp; RISK SNAPSHOTS</div><h2>Stocks on the radar</h2></div></div>
+ <p class="footnote" style="margin-bottom:12px">Recently purchased tickers, with brief historical price-based research notes. These are not buy recommendations.</p>
+ <div id="spotlights" class="spotlight-grid"></div>
+</section>
+<section id="trades" class="screen" aria-label="All disclosed trades">
+ <div class="overline">DISCLOSURE FEED</div><h1 class="subpage-title">Every move,<br><em>with a timestamp.</em></h1>
+ <div class="search-wrap"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 5 5"/></svg><input id="search" aria-label="Search ticker or politician" placeholder="Search a ticker or member…" autocomplete="off"></div>
+ <div class="filter-row"><button class="filter active" data-type="all">All trades</button><button class="filter" data-type="buy">Buys</button><button class="filter" data-type="sell">Sells</button></div>
+ <div class="micro-heading"><span id="feedCount">— filings</span><span>By disclosure date ↓</span></div>
+ <div class="trade-list" id="allTrades"></div><button id="loadMore" class="load-btn">Load more</button>
+</section>
+<section id="saved" class="screen" aria-label="Watchlist">
+ <div class="overline">YOUR RESEARCH DESK</div><h1 class="subpage-title">Your watchlist.<br><em>No noise.</em></h1><p class="subtitle">Tap the bookmark beside any disclosed trade to follow its ticker on this device.</p>
+ <div id="watchlist"></div>
+</section>
+<section id="about" class="screen" aria-label="Methodology">
+ <div class="overline">TRANSPARENCY</div><h1 class="subpage-title">The fine print.<br><em>Front and center.</em></h1>
+ <div class="explain-card"><h3>What does “top 10” mean?</h3><p>Politicians are ranked by equal-weight average percentage return from their publicly reported stock <b>purchases</b> in your chosen filing window. Only trades with a verifiable post-disclosure entry close and a later current close qualify; at least two qualifying purchases are needed. Each reported buy counts once, independent of disclosed amount.</p></div>
+ <div class="explain-card"><h3>Hypothetical return calculation</h3><p>Investing starts at the first available market close <b>strictly after the filing date</b>, not when the politician traded. Return = (latest available closing price ÷ hypothetical entry closing price − 1) × 100. Dollar simulation applies that return to your chosen amount, independently per selected ticker.</p></div>
+ <div class="explain-card"><h3>Are those real portfolios?</h3><p>No. Transaction disclosures show buy/sell events and broad dollar brackets. They usually do not show share counts, precise executions, current share ownership or a complete brokerage portfolio. We display reported activity and hypothetical performance, <b>not confirmed holdings or profit</b>.</p></div>
+ <div class="explain-card"><h3>What do the growth labels mean?</h3><p>Momentum and volatility labels are mechanical descriptions of recent historical prices—not an AI forecast or a buy recommendation. “Explosive” means high recent volatility; it may lose value rapidly. “Steady” means more modest recent movement, not guaranteed safety.</p></div>
+ <div class="explain-card"><h3>When does the app update?</h3><p>The website checks a stored snapshot whenever opened, and GitHub Actions attempts to fetch new disclosures and price history daily. The latest source filing date and the latest price-bar date appear in the interface. Scheduled jobs, public data sources, and free market feeds can fail or lag.</p></div>
+ <div class="explain-card"><h3>Data and sources</h3><p>Congressional transaction data: <a href="https://macrowombat.com/en/data/congress-trades" target="_blank" rel="noopener noreferrer">MacroWombat</a>, based on <a href="https://disclosures-clerk.house.gov/FinancialDisclosure" target="_blank" rel="noopener noreferrer">official House disclosures</a>. Historical market prices: Yahoo Finance daily price endpoint (where available). Individual PDF links are displayed on trades. Senate coverage should not be assumed unless explicitly present in the data status.</p></div>
+ <div class="explain-card"><h3>Not investment advice</h3><p>This free personal research tool is not affiliated with Congress, Autopilot, or any broker. Public filings can be corrected or delayed; prices can be stale or inaccurate; missing data is not estimated. Always research a company's business, valuation, earnings, and risk before investing.</p></div>
+ <p class="build-tag">CAPITOL PULSE · V1.0 · PERSONAL RESEARCH TOOL</p>
+</section>
+</main>
+<nav class="bottom-nav" aria-label="Main navigation"><button class="nav active" data-view="overview"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</button><button class="nav" data-view="trades"><svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 3 8-9"/><path d="M16 5h5v5"/><path d="M3 21h18"/></svg>Trades</button><button class="nav" data-view="saved"><svg viewBox="0 0 24 24"><path d="M5 4h14v17l-7-5-7 5V4Z"/></svg>Watchlist</button><button class="nav" data-view="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg>About</button></nav>
+</div>
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+<aside class="detail-sheet" id="detailSheet" role="dialog" aria-label="Trading detail" aria-modal="true" aria-hidden="true"><div class="sheet-handle"></div><button class="sheet-close" id="sheetClose" aria-label="Close detail">×</button><div id="sheetContent"></div></aside>
+<script src="app.js" defer></script></body></html>
