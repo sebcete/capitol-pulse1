@@ -256,7 +256,7 @@ def build():
         'senateSource':SOURCE_URL if 'Senate' in chambers else None,
         'priceSource':'Yahoo Finance daily historical close (adjusted where available)',
         'method':'Equal-weight simulated buys at first close strictly after public availability date. Excludes costs, taxes, and interim sales; not verified holdings.',
-        'trades':recent[:1800],'prices':prices,
+        'trades':recent,'prices':prices,
         'coverage':{'feedRows':len(trades),'recentRows':len(recent),
                     'pricedSymbols':len(latest),'consideredSymbols':len(symbols),
                     'chambers':chambers,'sourceYears':years},
