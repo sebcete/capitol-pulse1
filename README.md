@@ -2,7 +2,7 @@
 
 Capitol Pulse is a lightweight, installable **web app (PWA)**. It tracks publicly filed Congressional stock transactions, a 10-person research leaderboard ranked by *hypothetical post-disclosure returns*, stock price movement, a personal watchlist, recent-stock momentum/risk notes, and a $1,000-or-custom-amount simulator.
 
-**Cost:** $0/month for personal, noncommercial use on GitHub Free while within GitHub's public-repository usage limits. **ChatGPT Plus is not required** for the website to operate, update, or install on an iPhone.
+**Cost:** $0/month for personal, noncommercial use on GitHub Free while within GitHub's public-repository usage limits. 
 
 ## Publish it for free (one-time setup)
 
