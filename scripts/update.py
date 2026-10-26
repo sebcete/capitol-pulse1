@@ -18,7 +18,7 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / 'site' / 'data.json'
-SOURCE_URL = 'https://macrowombat.com/data/congress-trades.json'
+SOURCE_URL = 'https://huggingface.co/datasets/austin-starks/congressional-stock-trades'
 SESSION = requests.Session()
 SESSION.headers.update({'User-Agent': 'CapitolPulsePersonalResearch/1.0 (personal noncommercial tracker; contact via GitHub repository)', 'Accept': 'application/json, text/csv, */*'})
 TODAY = datetime.now(timezone.utc).date()
@@ -94,46 +94,66 @@ def parse_trades(blob):
 
 
 
-def load_senate():
-    """Use the public, versioned Senate event table. No invented or amended duplicates."""
+def load_events():
+    """Read current, reconciled House and Senate disclosures, not superseded versions."""
     import pyarrow.parquet as pq
-    out = []
+    cols = ['eventId','version','chamber','displayName','memberId','identitySource',
+            'owner','action','transactionDate','ticker','assetDescription',
+            'assetTypeLabel','amountLow','amountHigh','availableAt','supersededAt','sourceUrl']
+    results = []
+    seen = set()
+    years = []
     for year in (TODAY.year - 1, TODAY.year):
-        link = (f'https://huggingface.co/datasets/austin-starks/congressional-stock-trades/'
-                f'resolve/main/data/political_trade_events/{year}-00000-of-00001.parquet')
-        response = SESSION.get(link, timeout=40)
-        response.raise_for_status()
-        tab = pq.read_table(io.BytesIO(response.content), columns=[
-            'eventId','version','chamber','displayName','owner','action','transactionDate',
-            'ticker','assetDescription','assetTypeLabel','amountLow','amountHigh',
-            'availableAt','supersededAt','sourceUrl'])
-        for row in tab.to_pylist():
-            if str(row.get('chamber') or '').lower() != 'senate' or row.get('supersededAt') is not None:
+        url = f'{SOURCE_URL}/resolve/main/data/political_trade_events/{year}-00000-of-00001.parquet'
+        try:
+            response = SESSION.get(url, timeout=90)
+            response.raise_for_status()
+            table = pq.read_table(io.BytesIO(response.content), columns=cols)
+        except Exception as exc:
+            if year == TODAY.year:
+                raise RuntimeError(f'Current-year public dataset inaccessible: {exc}') from exc
+            print(f'WARN older {year} data unavailable: {exc}', flush=True)
+            continue
+        years.append(year)
+        for r in table.to_pylist():
+            if str(r.get('identitySource') or '').lower() not in ('legislators','override'):
                 continue
-            sym = clean_symbol(row.get('ticker'))
-            action = str(row.get('action') or '').lower()
-            # Exclude options, bonds and funds whose underlying price is not the purchased asset.
-            a_type = str(row.get('assetTypeLabel') or '').lower()
-            if any(x in a_type for x in ('option','bond','fund','derivative')):
+            if r.get('supersededAt') is not None:
                 continue
-            tx = parse_date(row.get('transactionDate'))
-            available = parse_date(row.get('availableAt'))
-            name = str(row.get('displayName') or '').strip()
-            if not (sym and tx and available and name and tx <= available <= TODAY and action in ('purchase','sale')):
+            action = str(r.get('action') or '').lower().strip()
+            if action not in ('purchase', 'sale', 'sale_partial', 'partial_sale'):
                 continue
-            lo, hi = safe_number(row.get('amountLow')), safe_number(row.get('amountHigh'))
-            label = f'${lo:,.0f} - ${hi:,.0f}' if lo is not None and hi is not None else 'Unspecified amount'
-            out.append({
-                'id': 's'+str(row.get('eventId') or len(out)),
-                'member': name,'chamber':'Senate','state':'','ticker':sym,
-                'asset': re.sub(r'\s+', ' ', str(row.get('assetDescription') or sym))[:125],
-                'owner':str(row.get('owner') or 'not specified').replace('_',' '),
+            category = str(r.get('assetTypeLabel') or '').lower()
+            if any(x in category for x in ('option','bond','fund','derivative','crypto')):
+                continue
+            sym = clean_symbol(r.get('ticker'))
+            trade = parse_date(r.get('transactionDate'))
+            filed = parse_date(r.get('availableAt'))
+            name = str(r.get('displayName') or '').strip()
+            if not (sym and trade and filed and name and trade <= filed <= TODAY):
+                continue
+            eid = str(r.get('eventId') or '')
+            unique = (eid, str(r.get('version') or '')) if eid else (name, sym, str(trade), str(filed), action)
+            if unique in seen:
+                continue
+            seen.add(unique)
+            lo, hi = safe_number(r.get('amountLow')), safe_number(r.get('amountHigh'))
+            label = ('$' + f'{lo:,.0f} – ' + '$' + f'{hi:,.0f}') if lo is not None and hi is not None else 'Not specified'
+            results.append({
+                'id':eid or ('event-' + str(len(results))),
+                'member':name,'chamber':str(r.get('chamber') or '').title(),
+                'state':'','ticker':sym,
+                'asset':re.sub(r'\s+', ' ', str(r.get('assetDescription') or sym))[:125],
+                'owner':str(r.get('owner') or 'not specified').replace('_',' '),
                 'type':'buy' if action == 'purchase' else 'sell',
-                'tradeDate':tx.isoformat(),'filedDate':available.isoformat(),
+                'tradeDate':trade.isoformat(),'filedDate':filed.isoformat(),
                 'amountMin':lo,'amountMax':hi,'amountLabel':label,
-                'filing':str(row.get('sourceUrl') or '')})
-    print(f'Parsed {len(out)} current Senate rows from public point-in-time events', flush=True)
-    return out
+                'filing':str(r.get('sourceUrl') or '')})
+        print(f'Loaded year {year}, accepted {len(results)} stock transactions so far', flush=True)
+    results.sort(key=lambda t:(t['filedDate'],t['tradeDate']), reverse=True)
+    if len(results) < 50:
+        raise RuntimeError(f'Only {len(results)} valid transactions in {years}; refusing incomplete data')
+    return results, years
 
 
 def yahoo_history(ticker):
@@ -200,70 +220,53 @@ def build():
     if TARGET.exists():
         try:
             prior = json.loads(TARGET.read_text(encoding='utf-8'))
-        except Exception:
+        except (ValueError, OSError):
             pass
     try:
-        feed = get_json(SOURCE_URL, 50)
-        trades = parse_trades(feed)
-    except Exception as ex:
-        raise RuntimeError(f'Disclosure feed unavailable: {ex}; preserving last working snapshot')
-    if not trades or len(trades) < 50:
-        raise RuntimeError('Too few valid disclosed transactions; preserving last working snapshot')
-    senate_loaded = False
-    try:
-        senate_trades = load_senate()
-        if senate_trades:
-            trades.extend(senate_trades)
-            senate_loaded = True
-    except Exception as ex:
-        print(f'WARN Senate source unavailable; House data still usable: {ex}', flush=True)
-    trades.sort(key=lambda x:(x['filedDate'],x['tradeDate']),reverse=True)
+        trades, years = load_events()
+    except Exception as exc:
+        raise RuntimeError(f'Disclosures unavailable: {exc}; preserving last working snapshot') from exc
     cutoff = TODAY - timedelta(days=190)
     recent = [t for t in trades if parse_date(t['filedDate']) >= cutoff]
-    # Rank and display recent activity; limit price fetches to today's most relevant stocks.
+    if len(recent) < 15:
+        raise RuntimeError(f'Only {len(recent)} recent records; preserving previous snapshot')
     symbols = []
-    for t in recent:
-        if t['type'] == 'buy' and t['ticker'] not in symbols:
-            symbols.append(t['ticker'])
+    for trade in recent:
+        if trade['type'] == 'buy' and trade['ticker'] not in symbols:
+            symbols.append(trade['ticker'])
     symbols = symbols[:120]
-    old_bars = prior.get('prices', {})
-    if not isinstance(old_bars, dict):
-        old_bars = {}
-    prices = {k:v for k,v in old_bars.items() if isinstance(v,list)}
-    with ThreadPoolExecutor(max_workers=6) as pool:
+    old = prior.get('prices', {})
+    prices = {k:v for k,v in old.items() if isinstance(v,list)} if isinstance(old,dict) else {}
+    with ThreadPoolExecutor(max_workers=5) as pool:
         futures = {pool.submit(yahoo_history, symbol):symbol for symbol in symbols}
         for fut in as_completed(futures):
             ticker, new = fut.result()
             if new:
                 prices[ticker] = new
-    # Never mix old price and today's feed without visible bar dates.
     prices = {sym:bars for sym,bars in prices.items() if sym in symbols and bars}
-    price_info = enrich(recent, prices)
-    newest_filing = max(t['filedDate'] for t in trades)
+    latest = enrich(recent, prices)
+    latest_filing = max(t['filedDate'] for t in recent)
+    chambers = sorted(set(t['chamber'] for t in recent))
     payload = {
-        'generatedAt': datetime.now(timezone.utc).isoformat(),
-        'latestFilingDate': newest_filing,
-        'sourceAsOf': str(feed.get('asOf') or ''),
-        'sourceName': 'MacroWombat House + Austin Starks Senate event data' if senate_loaded else 'MacroWombat / U.S. House Clerk filings',
-        'sourceUrl': SOURCE_URL,
-        'senateSource': 'https://huggingface.co/datasets/austin-starks/congressional-stock-trades' if senate_loaded else None,
-        'priceSource': 'Yahoo Finance daily historical close (adjusted where available)',
-        'method': 'Equal-weight hypothetical buys, entered at first available close strictly after filing date. No fees, spreads, taxes, dividends unless reflected by adjusted close, or interim exits. Not actual member holdings or returns.',
-        'trades': recent[:1800],
-        'prices': prices,
-        'coverage': {
-            'feedRows': len(trades),
-            'recentRows': len(recent),
-            'pricedSymbols': len(price_info),
-            'consideredSymbols': len(symbols),
-            'chambers': sorted(set(t['chamber'] for t in recent))
-        }
+        'generatedAt':datetime.now(timezone.utc).isoformat(),
+        'latestFilingDate':latest_filing,
+        'sourceAsOf':str(TODAY),
+        'sourceName':'Austin Starks reconciled public House + Senate disclosures',
+        'sourceUrl':SOURCE_URL,
+        'senateSource':SOURCE_URL if 'Senate' in chambers else None,
+        'priceSource':'Yahoo Finance daily historical close (adjusted where available)',
+        'method':'Equal-weight simulated buys at first close strictly after public availability date. Excludes costs, taxes, and interim sales; not verified holdings.',
+        'trades':recent[:1800],'prices':prices,
+        'coverage':{'feedRows':len(trades),'recentRows':len(recent),
+                    'pricedSymbols':len(latest),'consideredSymbols':len(symbols),
+                    'chambers':chambers,'sourceYears':years},
     }
-    TARGET.parent.mkdir(parents=True,exist_ok=True)
+    TARGET.parent.mkdir(parents=True, exist_ok=True)
     tmp = TARGET.with_suffix('.tmp')
     tmp.write_text(json.dumps(payload, separators=(',', ':'), ensure_ascii=False), encoding='utf-8')
     tmp.replace(TARGET)
-    print(f'OK {len(recent)} trades, {len(price_info)} priced symbols, last filing {newest_filing}, source {payload["sourceAsOf"]}')
+    print(f'OK {len(recent)} recent trades, {len(latest)} priced symbols, latest {latest_filing}, chambers {chambers}', flush=True)
+
 
 if __name__ == '__main__':
     try:
