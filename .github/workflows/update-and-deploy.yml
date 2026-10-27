@@ -25,8 +25,33 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      - name: Verify application scripts and return calculations
+        run: |
+          node --check site/app.js
+          node --check site/sw.js
+          python -m unittest discover -s scripts -p 'test_*.py'
       - name: Retrieve filings and price history
         run: python scripts/update.py
+      - name: Validate dataset before publishing
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from datetime import datetime, timezone, timedelta
+          from pathlib import Path
+          data = json.loads(Path('site/data.json').read_text(encoding='utf-8'))
+          trades = data.get('trades', [])
+          prices = data.get('prices', {})
+          newest = datetime.fromisoformat(data['generatedAt'].replace('Z', '+00:00'))
+          assert newest.tzinfo is not None and datetime.now(timezone.utc) - newest < timedelta(days=1), 'Snapshot generation date is stale'
+          assert len(trades) >= 50, 'Disclosure feed is unexpectedly small'
+          assert {'House', 'Senate'}.issubset(set(data.get('coverage', {}).get('chambers', []))), 'House or Senate records missing'
+          assert isinstance(prices, dict) and len(prices) >= 20, 'Market price coverage too small'
+          priced = [t for t in trades if t.get('type') == 'buy' and isinstance(t.get('returnPct'), (int, float))]
+          assert len(priced) >= 20, 'Too few priced purchases to calculate rankings'
+          assert all(t.get('filedDate') and t.get('tradeDate') for t in trades), 'Missing disclosure dates'
+          print(f"Snapshot verified: {len(trades)} filings, {len(prices)} priced tickers, {len(priced)} measurable purchases")
+          PY
       - name: Save successful daily snapshot
         if: github.event_name != 'push'
         run: |
