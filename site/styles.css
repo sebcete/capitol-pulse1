@@ -14,3 +14,19 @@
 @media(max-width:530px){.spotlight-grid{grid-template-columns:1fr}.spotlight{min-height:0}.spotlight-note{-webkit-line-clamp:3}}
 /* Keep the dismissed detail panel fully outside the screen reader and screenshot flow. */
 .detail-sheet[aria-hidden="true"]{visibility:hidden;pointer-events:none}
+
+/* Data-attributed equity links, not a suggested portfolio */
+.family-watch{display:grid;gap:11px;margin:13px 0 6px}
+.family-card{border:1px solid #2d4151;border-radius:15px;background:linear-gradient(135deg,#122430,#101823);padding:16px;color:#dbe9ef}
+.family-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.family-kicker{font-size:10px;color:#a4f1ce;letter-spacing:.3px;font-weight:700}
+.family-card h3{font-size:20px;margin:7px 0 10px;letter-spacing:-.4px;font-family:var(--display)}
+.family-card h3 span{font-size:11px;font-weight:500;color:#a2b5bf;display:block;letter-spacing:0;margin-top:4px}
+.family-price{text-align:right;flex-shrink:0}
+.family-price b{font-family:var(--display);font-size:15px}
+.family-price small{display:block;margin-top:5px;font-size:10px}
+.family-type{display:inline-block;color:#d7efe3;font-size:10px;background:#224034;border:1px solid #356049;padding:5px 9px;border-radius:15px}
+.family-card p{font-size:11px;line-height:1.65;color:#aabcc8}
+.family-foot{padding-top:11px;margin-top:10px;border-top:1px solid #2c4150;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:10px;color:#8497a9;flex-wrap:wrap}
+.family-foot a{font-weight:700;color:#abebc9;text-decoration:none}
+@media(max-width:370px){.family-head{flex-wrap:wrap}.family-price{text-align:left}}
