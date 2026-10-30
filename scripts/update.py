@@ -234,7 +234,10 @@ def build():
     for trade in recent:
         if trade['type'] == 'buy' and trade['ticker'] not in symbols:
             symbols.append(trade['ticker'])
-    symbols = symbols[:120]
+    # Keep independently verified Trump-family watch tickers available for charting.
+    # Inclusion is NOT evidence of a current holding or a congressional transaction.
+    watch_symbols = ['DJT', 'ABTC', 'AMD']
+    symbols = (watch_symbols + [symbol for symbol in symbols if symbol not in watch_symbols])[:120]
     old = prior.get('prices', {})
     prices = {k:v for k,v in old.items() if isinstance(v,list)} if isinstance(old,dict) else {}
     with ThreadPoolExecutor(max_workers=5) as pool:
